@@ -19,6 +19,43 @@ data Cell =   Empty
 
 type Grid = [[Cell]]
 
+type Pos = (Int, Int)
+
+data Snake     = MkSnake [Pos]
+type Apples    = Set.Set Pos
+type Walls     = Set.Set Pos
+data Direction = MoveRight 
+               | MoveLeft 
+               | MoveUp 
+               | MoveDown
+type Score     = Int
+
+data GameState = Running   { snake     :: Snake
+                           , apples    :: Apples
+                           , walls     :: Walls
+                           , direction :: Direction
+                           , score     :: Score
+                           }
+               | GameOver Score
+
+snakeHead :: Snake -> Pos
+snakeHead (MkSnake s) = head s
+
+removeTail :: Snake -> [Pos]
+removeTail (MkSnake s) = take (length s - 1) $ s
+
+moveSnake :: (Int, Int) -> Snake -> Direction -> Snake
+moveSnake (w, h) s d = MkSnake $ newHead : (removeTail s)
+  where newHead = nextPos d . snakeHead $ s
+        nextPos MoveRight (x,y) = wrap (x+1, y)
+        nextPos MoveLeft  (x,y) = wrap (x-1, y)
+        nextPos MoveUp    (x,y) = wrap (x, y+1)
+        nextPos MoveDown  (x,y) = wrap (x, y-1)
+        wrap (x, y) = (x `mod` w, y `mod` h)
+
+stepGame :: GameState -> GameState
+stepGame (GameOver s) = GameOver s
+
 gridRows :: Grid -> Int
 gridRows = length
 
