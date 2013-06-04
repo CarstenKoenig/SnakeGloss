@@ -11,10 +11,10 @@ module Game ( GridSize
             , Input (..)
             , GameState (..)
             , stepGame
+            , reactGame
             , initGame
             , snakeBody 
             , snakePos
-            , changeDirection
             ) where
 
 import System.Random ( randomRIO )
@@ -68,17 +68,14 @@ stepGame state
   | otherwise      = state { snake = snake' }
     where snake' = moveSnake (gridSize state) (direction state) (snake state)
 
+reactGame :: GameState -> Input -> GameState
+reactGame state key = state { direction = changeDirection (direction state) key }
+
 initGame :: GridSize -> GameState
 initGame gs = GameState snake apples walls MoveRight 0 gs False
   where snake = MkSnake [(2,2)] False
         apples = Set.empty
         walls = Set.empty
-
-changeDirection :: Direction -> Input -> Direction
-changeDirection move key
-  | inSameDirection move key || 
-    inOppositeDirection move key  = move
-  | otherwise                     = inputToDirection key
 
 snakePos :: (Int, Int)
 snakePos = (10,10)
@@ -120,6 +117,13 @@ directionToInput MoveLeft  = KeyLeft
 directionToInput MoveRight = KeyRight
 directionToInput MoveUp    = KeyUp
 directionToInput MoveDown  = KeyDown
+
+changeDirection :: Direction -> Input -> Direction
+changeDirection move key
+  | inSameDirection move key || 
+    inOppositeDirection move key  = move
+  | otherwise                     = inputToDirection key
+
 
 snakeHead :: Snake -> Pos
 snakeHead (MkSnake s _) = head s
