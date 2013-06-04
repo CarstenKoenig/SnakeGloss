@@ -6,8 +6,8 @@ module Graphics
         , Coord
         , Cell (..)
         , Grid
-        , gameToGrid
-        , drawGameGrid
+        , drawGame
+        , loadgameOverBmp
         ) where
 
 import Graphics.Gloss
@@ -34,6 +34,16 @@ data Cell
   deriving Show
 
 type Grid = [[Cell]]
+
+drawGame :: ViewPort -> Picture -> GameState -> Picture
+drawGame vp gameOver state = 
+        if (isGameOver state)
+        then pictures [ grid, gameOver ]
+        else grid
+     where grid = drawGameGrid vp . gameToGrid $ state     
+
+loadgameOverBmp :: IO Picture
+loadgameOverBmp = loadBMP "./GameOver.bmp"   
 
 gameToGrid :: GameState -> Grid
 gameToGrid state = [ [getCell(x,y) | x<-[0..w-1]] | y<-[0..h-1]]

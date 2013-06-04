@@ -10,12 +10,13 @@ import Game
 import Graphics
 
 main :: IO ()
-main =
+main = do
+  gameOverBmp <- loadgameOverBmp
   play  (InWindow "glossSNAKE" (width, height) (10, 10)) 
         black -- background color
         2 -- two step per second
         initialGame
-        (drawGameGrid vp . gameToGrid)
+        (drawGame vp gameOverBmp)
         react
         (\ _ game -> stepGame game)
   where (width, height) = (640, 640)

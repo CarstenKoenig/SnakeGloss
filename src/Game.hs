@@ -54,15 +54,16 @@ data GameState
     , direction :: Direction
     , score     :: Score
     , gridSize  :: GridSize
-    , gameOver  :: Bool
+    , isGameOver  :: Bool
     } deriving (Show, Eq)
 
 -- exports
 
 stepGame :: GameState -> GameState
 stepGame state       
-  | gameOver state = state
-  | otherwise      = moveStep . eatStep $ state
+  | isGameOver state' = state'
+  | otherwise         = moveStep . eatStep $ state'
+  where state' = checkGameOver state
 
 reactGame :: GameState -> Input -> GameState
 reactGame state key = state { direction = changeDirection (direction state) key }
@@ -107,6 +108,20 @@ grow s = s { isGrowing = True }
 eat :: Apples -> Pos -> Apples
 eat apples pos = Set.delete pos apples
 
+checkGameOver :: GameState -> GameState
+checkGameOver state = if willBiteItself state || willBiteWall state
+                      then gameOver state
+                      else state
+
+gameOver :: GameState -> GameState
+gameOver state = state { isGameOver = True }
+
+willBiteItself :: GameState -> Bool
+willBiteItself state = List.elem (nextPos state) (body . snake $ state)
+
+willBiteWall :: GameState -> Bool
+willBiteWall state = Set.member (nextPos state) (walls state)
+
 wrap :: GridSize -> Pos -> Pos
 wrap (w, h) (x, y) = (x `mod` w, y `mod` h)
 
@@ -148,6 +163,9 @@ changeDirection move key
 
 snakeHead :: Snake -> Pos
 snakeHead (MkSnake s _) = head s
+
+snakeTail :: Snake -> [Pos]
+snakeTail (MkSnake s _) = tail s
 
 removeTail :: Snake -> [Pos]
 removeTail (MkSnake s _) = take (length s - 1) $ s
