@@ -62,8 +62,7 @@ data GameState
 stepGame :: GameState -> GameState
 stepGame state       
   | gameOver state = state
-  | otherwise      = state { snake = snake' }
-    where snake' = moveSnake (gridSize state) (direction state) (snake state)
+  | otherwise      = eatStep . moveStep $ state
 
 reactGame :: GameState -> Input -> GameState
 reactGame state key = state { direction = changeDirection (direction state) key }
@@ -71,7 +70,7 @@ reactGame state key = state { direction = changeDirection (direction state) key 
 initGame :: GridSize -> GameState
 initGame gs = GameState snake apples walls MoveRight 0 gs False
   where snake = MkSnake [(2,2)] False
-        apples = Set.empty
+        apples = Set.fromList [ (i,i) | i <- [5,8..40]]
         walls = Set.empty
 
 snakePos :: (Int, Int)
@@ -81,6 +80,28 @@ snakeBody :: GameState -> [Pos]
 snakeBody = body . snake
 
 -- helpers
+
+moveStep :: GameState -> GameState
+moveStep state = state { snake = moveSnake (gridSize state) (direction state) (snake state) }
+
+moveSnake :: GridSize -> Direction -> Snake -> Snake
+moveSnake gs d s = s { body = newHead : newTail, isGrowing = False }
+  where newHead = move gs d . snakeHead $ s
+        newTail = if isGrowing s then body s else removeTail s
+
+eatStep :: GameState -> GameState
+eatStep state = if Set.member shd apls
+                then state { snake = grow s, apples = eat apls shd }
+                else state
+                where s    = snake state 
+                      shd  = snakeHead s
+                      apls = apples state
+
+grow :: Snake -> Snake
+grow s = s { isGrowing = True }
+
+eat :: Apples -> Pos -> Apples
+eat apples pos = Set.delete pos apples
 
 wrap :: GridSize -> Pos -> Pos
 wrap (w, h) (x, y) = (x `mod` w, y `mod` h)
@@ -121,13 +142,8 @@ changeDirection move key
     inOppositeDirection move key  = move
   | otherwise                     = inputToDirection key
 
-
 snakeHead :: Snake -> Pos
 snakeHead (MkSnake s _) = head s
 
 removeTail :: Snake -> [Pos]
 removeTail (MkSnake s _) = take (length s - 1) $ s
-
-moveSnake :: GridSize -> Direction -> Snake -> Snake
-moveSnake gs d s = s { body = newHead s : removeTail s }
-  where newHead = move gs d . snakeHead
