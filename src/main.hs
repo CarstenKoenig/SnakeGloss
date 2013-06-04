@@ -6,12 +6,6 @@ module Main where
 import Graphics.Gloss
 import qualified Graphics.Gloss.Interface.IO.Game as GlossIO
 
-import System.Random ( randomRIO )
-import Control.Monad ( forM, fmap )
-
-import qualified Data.Set as Set
-import qualified Data.List as List
-
 import Game
 import Graphics
 

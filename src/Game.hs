@@ -17,9 +17,6 @@ module Game ( GridSize
             , snakePos
             ) where
 
-import System.Random ( randomRIO )
-import Control.Monad ( forM, fmap )
-
 import qualified Data.Set as Set
 import qualified Data.List as List
 
