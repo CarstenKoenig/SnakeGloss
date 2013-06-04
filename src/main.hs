@@ -4,11 +4,18 @@
 module Main where
 
 import Graphics.Gloss
+import qualified Graphics.Gloss.Interface.IO.Game as GlossIO
+
 import System.Random ( randomRIO )
 import Control.Monad ( forM, fmap )
+
 import qualified Data.Set as Set
+import qualified Data.List as List
 
 data ViewPort = MkViewPort { pxWidth :: Int, pxHeigth :: Int }
+                deriving (Show, Eq)
+
+type GridSize = (Int, Int)
 type Coord    = (Float, Float)
 
 data Cell =   Empty
@@ -21,40 +28,99 @@ type Grid = [[Cell]]
 
 type Pos = (Int, Int)
 
-data Snake     = MkSnake [Pos]
+data Snake     = MkSnake { body :: [Pos], isGrowing :: Bool } 
+                 deriving (Show, Eq)
+
 type Apples    = Set.Set Pos
 type Walls     = Set.Set Pos
-data Direction = MoveRight 
-               | MoveLeft 
-               | MoveUp 
-               | MoveDown
 type Score     = Int
 
-data GameState = Running   { snake     :: Snake
-                           , apples    :: Apples
-                           , walls     :: Walls
-                           , direction :: Direction
-                           , score     :: Score
-                           }
-               | GameOver Score
+data Direction 
+  = MoveRight 
+  | MoveLeft 
+  | MoveUp 
+  | MoveDown
+  deriving (Show, Eq)
+
+data Input
+  = KeyDown
+  | KeyUp
+  | KeyLeft
+  | KeyRight
+  deriving (Show, Eq)
+
+data GameState 
+  = GameState   
+    { snake     :: Snake
+    , apples    :: Apples
+    , walls     :: Walls
+    , direction :: Direction
+    , score     :: Score
+    , gridSize  :: GridSize
+    , gameOver  :: Bool
+    }
+ deriving (Show, Eq)
+
+wrap :: GridSize -> Pos -> Pos
+wrap (w, h) (x, y) = (x `mod` w, y `mod` h)
+
+move :: GridSize -> Direction -> Pos -> Pos
+move gs MoveRight (x,y) = wrap gs (x+1, y)
+move gs MoveLeft  (x,y) = wrap gs (x-1, y)
+move gs MoveUp    (x,y) = wrap gs (x, y-1)
+move gs MoveDown  (x,y) = wrap gs (x, y+1)
+
+oppositeDirection :: Direction -> Direction
+oppositeDirection MoveLeft  = MoveRight
+oppositeDirection MoveRight = MoveLeft
+oppositeDirection MoveUp    = MoveDown
+oppositeDirection MoveDown  = MoveUp
+
+inSameDirection :: Direction -> Input -> Bool
+inSameDirection d k = d == inputToDirection k
+
+inOppositeDirection :: Direction -> Input -> Bool
+inOppositeDirection d k = inSameDirection (oppositeDirection d) k
+
+inputToDirection :: Input -> Direction
+inputToDirection KeyLeft  = MoveLeft
+inputToDirection KeyRight = MoveRight
+inputToDirection KeyUp    = MoveUp
+inputToDirection KeyDown  = MoveDown
+
+directionToInput :: Direction -> Input
+directionToInput MoveLeft  = KeyLeft
+directionToInput MoveRight = KeyRight
+directionToInput MoveUp    = KeyUp
+directionToInput MoveDown  = KeyDown
+
+changeDirection :: Direction -> Input -> Direction
+changeDirection move key
+  | inSameDirection move key || 
+    inOppositeDirection move key  = move
+  | otherwise                     = inputToDirection key
 
 snakeHead :: Snake -> Pos
-snakeHead (MkSnake s) = head s
+snakeHead (MkSnake s _) = head s
 
 removeTail :: Snake -> [Pos]
-removeTail (MkSnake s) = take (length s - 1) $ s
+removeTail (MkSnake s _) = take (length s - 1) $ s
 
-moveSnake :: (Int, Int) -> Snake -> Direction -> Snake
-moveSnake (w, h) s d = MkSnake $ newHead : (removeTail s)
-  where newHead = nextPos d . snakeHead $ s
-        nextPos MoveRight (x,y) = wrap (x+1, y)
-        nextPos MoveLeft  (x,y) = wrap (x-1, y)
-        nextPos MoveUp    (x,y) = wrap (x, y+1)
-        nextPos MoveDown  (x,y) = wrap (x, y-1)
-        wrap (x, y) = (x `mod` w, y `mod` h)
+moveSnake :: GridSize -> Direction -> Snake -> Snake
+moveSnake gs d s = s { body = newHead s : removeTail s }
+  where newHead = move gs d . snakeHead
 
 stepGame :: GameState -> GameState
-stepGame (GameOver s) = GameOver s
+stepGame state       
+  | gameOver state = state
+  | otherwise      = state { snake = snake' }
+    where snake' = moveSnake (gridSize state) (direction state) (snake state)
+
+initGame :: GridSize -> GameState
+initGame gs = GameState snake apples walls MoveRight 0 gs False
+  where snake = MkSnake [(2,2)] False
+        apples = Set.empty
+        walls = Set.empty
 
 gridRows :: Grid -> Int
 gridRows = length
@@ -64,6 +130,16 @@ gridCols = length . head
 
 snakePos :: (Int, Int)
 snakePos = (10,10)
+
+gameToGrid :: GameState -> Grid
+gameToGrid state = [ [getCell(x,y) | x<-[0..w-1]] | y<-[0..h-1]]
+  where (w, h) = gridSize state
+        getCell pos
+          | List.elem pos (body . snake $ state) = Snake
+          | Set.member pos (apples state)        = Apple
+          | Set.member pos (walls state)         = Wall
+          | otherwise                            = Empty
+
 
 gridInitialize :: Int -> Int -> Int -> IO Grid
 gridInitialize w h appleCount = do
@@ -139,14 +215,28 @@ drawCell vp coord content sz =
           cell c = fillRectangle vp coord c sz
 
 main :: IO ()
-main = do
-   grid <- gridInitialize 50 50 5
-   display (InWindow "Hello GLOSS" (width, height) (10, 10)) black $ drawGameGrid grid vp
+main =
+  play  (InWindow "snkaeGLOSS" (width, height) (10, 10)) 
+        black -- background color
+        2 -- two step per second
+        initialGame
+        (drawGameGrid vp . gameToGrid)
+        react
+        (\ _ game -> stepGame game)
   where (width, height) = (640, 640)
         vp = MkViewPort width height
+        initialGame = initGame (50, 50)
+        react (GlossIO.EventKey (GlossIO.SpecialKey k) GlossIO.Down _ _) world =
+          case k of
+            GlossIO.KeyUp    -> world { direction = changeDirection (direction world) KeyUp }
+            GlossIO.KeyDown  -> world { direction = changeDirection (direction world) KeyDown }
+            GlossIO.KeyLeft  -> world { direction = changeDirection (direction world) KeyLeft }
+            GlossIO.KeyRight -> world { direction = changeDirection (direction world) KeyRight }
+            _   -> world
+        react _ world = world     
 
-drawGameGrid :: Grid -> ViewPort -> Picture
-drawGameGrid grid vp = pictures cells
+drawGameGrid :: ViewPort -> Grid -> Picture
+drawGameGrid vp grid = pictures cells
     where cells = [ drawCell vp (pos i j) (getCell grid i j) (w, h) | i <- [0..rows-1], j <- [0..cols-1] ]
           pos i j = ((fromIntegral i + 0.5) * w, (fromIntegral j + 0.5) * h)
           rows = gridCols grid
