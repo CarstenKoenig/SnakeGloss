@@ -14,7 +14,7 @@ main = do
   gameOverBmp <- loadgameOverBmp
   play  (InWindow "glossSNAKE" (width, height) (10, 10)) 
         black -- background color
-        2 -- two step per second
+        3 -- three step per second (speed)
         initialGame
         (drawGame vp gameOverBmp)
         react
