@@ -62,7 +62,7 @@ data GameState
 stepGame :: GameState -> GameState
 stepGame state       
   | gameOver state = state
-  | otherwise      = eatStep . moveStep $ state
+  | otherwise      = moveStep . eatStep $ state
 
 reactGame :: GameState -> Input -> GameState
 reactGame state key = state { direction = changeDirection (direction state) key }
@@ -82,20 +82,24 @@ snakeBody = body . snake
 -- helpers
 
 moveStep :: GameState -> GameState
-moveStep state = state { snake = moveSnake (gridSize state) (direction state) (snake state) }
+moveStep state = state { snake = moveSnake state }
 
-moveSnake :: GridSize -> Direction -> Snake -> Snake
-moveSnake gs d s = s { body = newHead : newTail, isGrowing = False }
-  where newHead = move gs d . snakeHead $ s
+moveSnake :: GameState -> Snake
+moveSnake state = s { body = newHead : newTail, isGrowing = False }
+  where newHead = nextPos state
         newTail = if isGrowing s then body s else removeTail s
+        s       = snake state
+
+nextPos :: GameState -> Pos
+nextPos state = move (gridSize state) (direction state) (snakeHead . snake $ state)
 
 eatStep :: GameState -> GameState
-eatStep state = if Set.member shd apls
-                then state { snake = grow s, apples = eat apls shd }
+eatStep state = if Set.member next apls
+                then state { snake = grow s, apples = eat apls next }
                 else state
-                where s    = snake state 
-                      shd  = snakeHead s
-                      apls = apples state
+                where s     = snake state 
+                      next  = nextPos state
+                      apls  = apples state
 
 grow :: Snake -> Snake
 grow s = s { isGrowing = True }
