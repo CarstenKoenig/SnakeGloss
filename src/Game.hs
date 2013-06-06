@@ -20,14 +20,19 @@ module Game ( GridSize
 import qualified Data.Set as Set
 import qualified Data.List as List
 
+import System.Random ( randomRIO )
+import Control.Monad ( fmap )
+
 type GridSize = (Int, Int)
 type Pos      = (Int, Int)
 
 data Snake 
-    = MkSnake 
-        { body :: [Pos]
-        , isGrowing :: Bool 
+    = Snake 
+        { body          :: [Pos]
+        , isGrowing     :: Bool
+        , moveDirection :: Direction 
         } deriving (Show, Eq)
+
 type Apples    = Set.Set Pos
 type Walls     = Set.Set Pos
 type Score     = Int
@@ -66,19 +71,30 @@ stepGame state
   where state' = checkGameOver state
 
 reactGame :: GameState -> Input -> GameState
-reactGame state key = state { direction = changeDirection (direction state) key }
+reactGame state key = state { direction = changeDirection (snakeDirection $ state) key }
 
-initGame :: GridSize -> GameState
-initGame gs = GameState snake apples walls MoveRight 0 gs False
-  where snake = MkSnake [(2,2)] False
-        apples = Set.fromList [ (i,i) | i <- [5,8..40]]
-        walls = Set.empty
+initGame :: GridSize -> Int -> IO GameState
+initGame gs aplCnt = do
+  apples <- fmap Set.fromList $ randomApples aplCnt occupied
+  return $ GameState snake apples walls MoveRight 0 gs False
+  where walls = Set.empty
+        snakeParts = [(2,2), (2,3)]
+        snake = createSnake snakeParts False MoveRight
+        occupied = Set.union (Set.fromList snakeParts) walls
+        (gw, gh) = gs
+        randomApples cnt noGo =
+          if cnt <= 0 
+            then return [] 
+            else do
+              x <- randomRIO (0, gw-1)
+              y <- randomRIO (0, gh-1)
+              if Set.member (x,y) noGo
+                then randomApples cnt noGo
+                else fmap ((x,y) :) (randomApples (cnt-1) (Set.insert (x,y) noGo))
+
 
 snakePos :: (Int, Int)
 snakePos = (10,10)
-
-snakeBody :: GameState -> [Pos]
-snakeBody = body . snake
 
 -- helpers
 
@@ -86,13 +102,12 @@ moveStep :: GameState -> GameState
 moveStep state = state { snake = moveSnake state }
 
 moveSnake :: GameState -> Snake
-moveSnake state = s { body = newHead : newTail, isGrowing = False }
+moveSnake state = (snake state) { body = newHead : newTail, moveDirection = direction state, isGrowing = False }
   where newHead = nextPos state
-        newTail = if isGrowing s then body s else removeTail s
-        s       = snake state
+        newTail = if snakeGrowing state then snakeBody state else removeTail state
 
 nextPos :: GameState -> Pos
-nextPos state = move (gridSize state) (direction state) (snakeHead . snake $ state)
+nextPos state = move (gridSize state) (direction $ state) (snakeHead $ state)
 
 eatStep :: GameState -> GameState
 eatStep state = if Set.member next apls
@@ -117,7 +132,7 @@ gameOver :: GameState -> GameState
 gameOver state = state { isGameOver = True }
 
 willBiteItself :: GameState -> Bool
-willBiteItself state = List.elem (nextPos state) (body . snake $ state)
+willBiteItself state = List.elem (nextPos state) (snakeBody $ state)
 
 willBiteWall :: GameState -> Bool
 willBiteWall state = Set.member (nextPos state) (walls state)
@@ -161,11 +176,24 @@ changeDirection move key
     inOppositeDirection move key  = move
   | otherwise                     = inputToDirection key
 
-snakeHead :: Snake -> Pos
-snakeHead (MkSnake s _) = head s
+createSnake :: [Pos] -> Bool -> Direction -> Snake
+createSnake = Snake
 
-snakeTail :: Snake -> [Pos]
-snakeTail (MkSnake s _) = tail s
+snakeBody :: GameState -> [Pos]
+snakeBody = body . snake
 
-removeTail :: Snake -> [Pos]
-removeTail (MkSnake s _) = take (length s - 1) $ s
+snakeHead :: GameState -> Pos
+snakeHead = head . snakeBody
+
+snakeTail :: GameState -> [Pos]
+snakeTail = tail . snakeBody
+
+snakeDirection :: GameState -> Direction
+snakeDirection = moveDirection . snake
+
+snakeGrowing :: GameState -> Bool
+snakeGrowing = isGrowing . snake
+
+removeTail :: GameState -> [Pos]
+removeTail = removeEnd . snakeBody
+  where removeEnd ls = take (length ls - 1) ls

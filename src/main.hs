@@ -12,6 +12,7 @@ import Graphics
 main :: IO ()
 main = do
   gameOverBmp <- loadgameOverBmp
+  initialGame <- initGame (50, 50) 20
   play  (InWindow "glossSNAKE" (width, height) (10, 10)) 
         black -- background color
         3 -- three step per second (speed)
@@ -21,7 +22,6 @@ main = do
         (\ _ game -> stepGame game)
   where (width, height) = (640, 640)
         vp = MkViewPort width height
-        initialGame = initGame (50, 50)
         react (GlossIO.EventKey (GlossIO.SpecialKey k) GlossIO.Down _ _) world =
           case k of
             GlossIO.KeyUp    -> reactGame world KeyUp
