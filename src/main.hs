@@ -15,7 +15,7 @@ main = do
   initialGame <- initGame (50, 50) 20
   play  (InWindow "glossSNAKE" (width, height) (10, 10)) 
         black -- background color
-        3 -- three step per second (speed)
+        5 -- three step per second (speed)
         initialGame
         (drawGame vp gameOverBmp)
         react

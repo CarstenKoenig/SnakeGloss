@@ -63,21 +63,6 @@ drawGameGrid vp grid = pictures cells
           w = 1.0 / fromIntegral rows
           h = 1.0 / fromIntegral cols
 
-applePositions :: Int -> (Int, Int) -> IO (Set.Set (Int, Int))
-applePositions apples (gw, gh) = insert Set.empty
-  where insert m
-          | Set.size m >= apples = return m
-          | otherwise = do
-            m' <- insertRandom m
-            insert m'
-          where 
-            insertRandom m = do
-              x <- randomRIO (1, gw-2)
-              y <- randomRIO (1, gh-2)
-              return $
-                if (x,y) == snakePos then m
-                else Set.insert (x,y) m
-
 gridRows :: Grid -> Int
 gridRows = length
 
