@@ -137,7 +137,7 @@ moveStep state = state { snake = moveSnake state }
 -- sets the isGrowing flag and removes the apple from the game
 eatStep :: GameState -> GameState
 eatStep state = if Set.member next apls
-                then state { snake = grow s, apples = eat apls next }
+                then state { snake = grow s, apples = eat apls next, score = score state + 1 }
                 else state
                 where s     = snake state 
                       next  = nextPos state
