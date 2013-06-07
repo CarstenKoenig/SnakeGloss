@@ -38,7 +38,6 @@ import qualified Data.Set as Set
 import qualified Data.List as List
 
 import System.Random ( randomRIO )
-import Control.Monad ( fmap )
 
 -- | the size of the grid ... here the snake may roam
 type GridSize = (Int, Int)
@@ -113,12 +112,12 @@ reactGame state key = state { direction = changeDirection (snakeDirection $ stat
 -- | initializes a gamestate with the given grid-size and the given number of apples to randomly place on the grid
 initGame :: GridSize -> Int -> IO GameState
 initGame gs aplCnt = do
-  apples <- fmap Set.fromList $ randomApples aplCnt occupied
-  return $ GameState snake apples walls MoveRight 0 gs False
-  where walls = Set.empty
+  apls <- fmap Set.fromList $ randomApples aplCnt occupied
+  return $ GameState sk apls wls MoveRight 0 gs False
+  where wls = Set.empty
         snakeParts = [(2,2), (2,3)]
-        snake = createSnake snakeParts False MoveRight
-        occupied = Set.union (Set.fromList snakeParts) walls
+        sk = createSnake snakeParts False MoveRight
+        occupied = Set.union (Set.fromList snakeParts) wls
         (gw, gh) = gs
         randomApples cnt noGo =
           if cnt <= 0 
@@ -184,19 +183,12 @@ inputToDirection KeyRight = MoveRight
 inputToDirection KeyUp    = MoveUp
 inputToDirection KeyDown  = MoveDown
 
--- | direction to input
-directionToInput :: Direction -> Input
-directionToInput MoveLeft  = KeyLeft
-directionToInput MoveRight = KeyRight
-directionToInput MoveUp    = KeyUp
-directionToInput MoveDown  = KeyDown
-
 -- | if possible changes the direction, if not stays the same
   -- it is possible to change the direction if it is not the same or the opposite (so the snake will move into itself)
 changeDirection :: Direction -> Input -> Direction
-changeDirection move key
-  | inSameDirection move key || 
-    inOppositeDirection move key  = move
+changeDirection m key
+  | inSameDirection m key || 
+    inOppositeDirection m key  = m
   | otherwise                     = inputToDirection key
 
 -- | uses the next user-direction to return the next position of the snakes head
@@ -220,10 +212,6 @@ snakeBody = body . snake
 -- | yields the cell-position of the snakes head
 snakeHead :: GameState -> Pos
 snakeHead = head . snakeBody
-
--- | yields the cell-positions of the snakes tail
-snakeTail :: GameState -> [Pos]
-snakeTail = tail . snakeBody
 
 -- | yields the direction the snake is currently moving in
 snakeDirection :: GameState -> Direction
@@ -256,4 +244,4 @@ grow s = s { isGrowing = True }
 
 -- | removes an eaten apple from the apple-positions
 eat :: Apples -> Pos -> Apples
-eat apples pos = Set.delete pos apples
+eat apls pos = Set.delete pos apls

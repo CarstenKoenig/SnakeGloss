@@ -33,10 +33,6 @@ module Graphics (
         ) where
 
 import Graphics.Gloss
-import qualified Graphics.Gloss.Interface.IO.Game as GlossIO
-
-import System.Random ( randomRIO )
-import Control.Monad ( forM, fmap )
 
 import qualified Data.Set as Set
 import qualified Data.List as List
@@ -87,9 +83,9 @@ loadgameOverBmp = loadBMP "./GameOver.bmp"
 
 -- | transforms a 'GameState' into a 'Grid' description of it
 gameToGrid :: GameState -> Grid
-gameToGrid state = [ [getCell(x,y) | x<-[0..w-1]] | y<-[0..h-1]]
+gameToGrid state = [ [ getContent(x,y) | x<-[0..w-1]] | y<-[0..h-1]]
   where (w, h) = gridSize state
-        getCell pos
+        getContent pos
           | List.elem pos (snakeBody state)      = Snake
           | Set.member pos (apples state)        = Apple
           | Set.member pos (walls state)         = Wall
