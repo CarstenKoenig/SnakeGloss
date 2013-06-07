@@ -47,11 +47,11 @@ main = do
   initialGame <- initGame (50, 50) 20
   play  (InWindow "glossSNAKE" windowSize (10, 10)) 
         black -- background color
-        5 -- three step per second (speed)
+        60 -- sixty frames per second (speed)
         initialGame
         (drawGame viewPort gameOverBmp)
         react
-        (\ _ game -> stepGame game)
+        runGame
   where react (GlossIO.EventKey (GlossIO.SpecialKey k) GlossIO.Down _ _) world =
           case k of
             GlossIO.KeyUp    -> reactGame world KeyUp

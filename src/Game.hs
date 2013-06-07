@@ -28,7 +28,7 @@ module Game (
   -- ** Initialization
   , initGame
   -- ** Controling the game state
-  , stepGame
+  , runGame
   , reactGame
   -- ** Helpers
   , snakeBody 
@@ -85,14 +85,24 @@ data Input
 -- | the game-state
 data GameState 
   = GameState   
-    { snake     :: Snake      -- ^information on the snake
-    , apples    :: Apples     -- ^where are the apples
-    , walls     :: Walls      -- ^where are the walls
-    , direction :: Direction  -- ^where should the snake move to next (input buffer)
-    , score     :: Score      -- ^the current score
-    , gridSize  :: GridSize   -- ^the games grid-size
-    , isGameOver  :: Bool     -- ^is the game over
+    { snake       :: Snake      -- ^information on the snake
+    , apples      :: Apples     -- ^where are the apples
+    , walls       :: Walls      -- ^where are the walls
+    , direction   :: Direction  -- ^where should the snake move to next (input buffer)
+    , score       :: Score      -- ^the current score
+    , gridSize    :: GridSize   -- ^the games grid-size
+    , isGameOver  :: Bool       -- ^is the game over
+    , speed       :: Float      -- ^after this many secods the snake should move
+    , moveInSecs  :: Float      -- ^when should the snake move again?
     } deriving (Show, Eq)
+
+-- | checks if the enough time has passed to make a step and does so if yes
+runGame :: Float -> GameState -> GameState
+runGame secPassed state
+  | timeOverStep <= 0 = runGame 0 $ state'
+  | otherwise         = state'
+  where state'        = (stepGame state) { moveInSecs = speed state + timeOverStep }
+        timeOverStep  = moveInSecs state - secPassed
 
 
 -- | updates the game-state:
@@ -100,7 +110,7 @@ data GameState
 -- * the game will eat apples and grow
 -- * the snake will move
 stepGame :: GameState -> GameState
-stepGame state       
+stepGame state      
   | isGameOver state' = state'
   | otherwise         = moveStep . eatStep $ state'
   where state' = checkGameOver state
@@ -113,7 +123,7 @@ reactGame state key = state { direction = changeDirection (snakeDirection $ stat
 initGame :: GridSize -> Int -> IO GameState
 initGame gs aplCnt = do
   apls <- fmap Set.fromList $ randomApples aplCnt occupied
-  return $ GameState sk apls wls MoveRight 0 gs False
+  return $ GameState sk apls wls MoveRight 0 gs False 0.5 0.5
   where wls = Set.empty
         snakeParts = [(2,2), (2,3)]
         sk = createSnake snakeParts False MoveRight
