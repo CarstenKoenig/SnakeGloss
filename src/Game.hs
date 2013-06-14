@@ -82,6 +82,12 @@ data Input
   | KeyRight
   deriving (Show, Eq)
 
+-- | after each apple a sligth speedup should occur
+  -- this factor is multiplied by the current speed after
+  -- an apple is eaten - increasing the snakes speed by 5%
+speedUp :: Float
+speedUp = 0.95
+
 -- | the game-state
 data GameState 
   = GameState   
@@ -148,7 +154,11 @@ moveStep state = state { snake = moveSnake state }
 -- sets the isGrowing flag and removes the apple from the game
 eatStep :: GameState -> GameState
 eatStep state = if Set.member next apls
-                then state { snake = grow s, apples = eat apls next, score = score state + 1 }
+                then state { snake = grow s
+                           , apples = eat apls next
+                           , score = score state + 1 
+                           , speed = speed state * speedUp
+                           }
                 else state
                 where s     = snake state 
                       next  = nextPos state
