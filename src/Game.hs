@@ -99,10 +99,11 @@ data GameState
 -- | checks if the enough time has passed to make a step and does so if yes
 runGame :: Float -> GameState -> GameState
 runGame secPassed state
-  | timeOverStep <= 0 = runGame 0 $ state'
-  | otherwise         = state'
-  where state'        = (stepGame state) { moveInSecs = speed state + timeOverStep }
-        timeOverStep  = moveInSecs state - secPassed
+  | remainingSecs <= 0 = runGame 0 $ stateAdv
+  | otherwise          = stateWait
+  where stateAdv       = (stepGame state) { moveInSecs = speed state + remainingSecs }
+        stateWait      = state { moveInSecs = remainingSecs}
+        remainingSecs  = moveInSecs state - secPassed
 
 
 -- | updates the game-state:
