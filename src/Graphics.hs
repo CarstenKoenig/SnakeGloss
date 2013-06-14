@@ -73,9 +73,16 @@ drawGame :: ViewPort  -- ^the viewport of used to calculate the coordinates
          -> Picture   -- ^a picture showing the current gamestate
 drawGame vp gameOver state = 
         if (isGameOver state)
-        then pictures [ grid, gameOver ]
-        else grid
-     where grid = drawGameGrid vp . gameToGrid $ state     
+        then pictures [ grid, gameOver, sc ]
+        else pictures [ grid, sc ]
+     where grid = drawGameGrid vp . gameToGrid $ state
+           sc = drawScore vp state 
+
+drawScore :: ViewPort -> GameState -> Picture
+drawScore vp state = Translate (- pixelWidth vp / 2.0 + 5) (pixelHeight vp / 2.0 - 20)
+                   $ Scale 0.15 0.15
+                   $ color white
+                   $ Text $ show (score state)
 
 -- | loads the gameover-picture (from a file named GameOver.bmp - must be an 24 or 32 bit bitmap without compression)
 loadgameOverBmp :: IO Picture
